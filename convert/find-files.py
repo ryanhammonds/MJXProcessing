@@ -7,50 +7,53 @@ import fnmatch  # compare substring filename
 defaultPath = "/mnt/Filbey/common/Studies/MJX_WF/examples/NL"
 
 
-def find_par_or_rec(path):
-    raw_data_list = []
+def findParOrRec(path):
+    rawDataList = []
     for roots, dirs, files in os.walk(path):
         for file in files:
             if fnmatch.fnmatch(file, "*.REC"):
                 # print(file)
-                raw_data_list.append(file)
-                return raw_data_list
+                rawDataList.append(file)
+            if fnmatch.fnmatch(file, "*.PAR"):
+                # print(file)
+                rawDataList.append(file)
+    return rawDataList
 
 
-def find_t1(path=defaultPath):
-    file_name_list = []
-    for file in find_par_or_rec(path):
+def findT1(path=defaultPath):
+    fileNameList = []
+    for file in findParOrRec(path):
         if fnmatch.fnmatch(file, "*T1*"):
-            file_name_list.append(file)
-    return file_name_list
+            fileNameList.append(file)
+    return fileNameList
 
 
-def find_dwi(path=defaultPath):
-    dwi_list = []
-    for file in find_par_or_rec(path):
+def findDwi(path=defaultPath):
+    dwiList = []
+    for file in findParOrRec(path):
         if fnmatch.fnmatch(file, "*dwi*"):
-            dwi_list.append(file)
-    return dwi_list
+            dwiList.append(file)
+    return dwiList
 
 
-def find_fmap(path=defaultPath):
-    fmap_list = []
-    for file in find_par_or_rec(path):
+def findFmap(path=defaultPath):
+    fmapList = []
+    for file in findParOrRec(path):
         if fnmatch.fnmatch(file, "*topup*"):
-            fmap_list.append(file)
-    return fmap_list
+            fmapList.append(file)
+    return fmapList
 
 
-def find_task(path=defaultPath):
-    task_list = []
-    for file in find_par_or_rec(path):
+def findTask(path=defaultPath):
+    taskList = []
+    for file in findParOrRec(path):
         if fnmatch.fnmatch(file, "*bold*"):
             if not fnmatch.fnmatch(file, "*topup*"):
-                task_list.append(file)
-        return task_list
+                taskList.append(file)
+    return taskList
 
 
-print(find_t1())
-print(find_dwi())
-print(find_fmap())
-print(find_task())
+print(findT1())
+print(findDwi())
+print(findFmap())
+print(findTask())
