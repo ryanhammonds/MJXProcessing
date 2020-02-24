@@ -1,3 +1,4 @@
+#dont use me
 import os
 import fnmatch
 defaultPath = "/mnt/Filbey/common/Studies/MJX_WF/examples/NL/sub-1126"
@@ -10,6 +11,7 @@ input: /mnt/Filbey/common/Studies/MJX_WF
                 task*BOLD (not topUp)->func
 """
 
+#### find functions
 def findParOrRec(path):
     rawDataList = []
     for roots, dirs, files in os.walk(path):
@@ -54,6 +56,8 @@ def findTask(path=defaultPath):
             if not fnmatch.fnmatch(file, "*topup*"):
                 taskList.append(file)
     return taskList
+#### end find functions
+
 
 
 # dcm2niix_NL -p n -o output/folder -f sub-${subjID}_ses-0${ses}_T1w *.PAR

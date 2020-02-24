@@ -1,3 +1,5 @@
+#dont use me
+
 import os  # interface with path
 import fnmatch  # compare substring filename
 
@@ -51,11 +53,6 @@ def findTask(path=defaultPath):
                 taskList.append(file)
     return taskList
 
-
-class subject
-    anat_files
-    func_files
-    subj_id
 
 
 print(findT1())
