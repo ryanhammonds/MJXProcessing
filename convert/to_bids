@@ -1,10 +1,14 @@
-import os  # interface with path
-import fnmatch  # compare substring filename
-
-# get par or rec file, returns file
-
-defaultPath = "/mnt/Filbey/common/Studies/MJX_WF/examples/NL"
-
+import os
+import fnmatch
+defaultPath = "/mnt/Filbey/common/Studies/MJX_WF/examples/NL/sub-1126"
+defaultPath = "/home/evan/Filbey/common/Studies/MJXProcessing/examples/NL/sub-1126"
+"""
+input: /mnt/Filbey/common/Studies/MJX_WF
+        output: t1->anat
+                dwi -> dwi
+                topUp -> fmap
+                task*BOLD (not topUp)->func
+"""
 
 def findParOrRec(path):
     rawDataList = []
@@ -52,13 +56,25 @@ def findTask(path=defaultPath):
     return taskList
 
 
-class subject
-    anat_files
-    func_files
-    subj_id
+# dcm2niix_NL -p n -o output/folder -f sub-${subjID}_ses-0${ses}_T1w *.PAR
+class Subject:
+    def __init__(self, subject_path):
+        self.subject_path = subject_path
+        self.sessions = []
+        for session in os.listdir(subject_path):
+            self.sessions.append(Session(subject_path + '/' + session))
 
 
-print(findT1())
-print(findDwi())
-print(findFmap())
-print(findTask())
+class Session():
+    def __init__(self, session_path):
+        # creates list of files eligible for each BIDS directory
+        self.session_path = session_path
+        self.anat_files = findT1(session_path)
+        self.dwi_files = findDwi(session_path)
+        self.fmap_files = findFmap(session_path)
+        self.func_files = findTask(session_path)
+
+
+testSubject = Subject(defaultPath)
+print(testSubject.sessions.__getitem__(0).anat_files)
+
