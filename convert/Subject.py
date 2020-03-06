@@ -4,10 +4,15 @@
 import os
 import re
 import glob
+import scripts
 import subprocess #used to call bash scripts like dcm2niix
 
 
 class Subject:
+    #to do
+    #to-bids function - assigns all subject scan attributes to a bids style output
+    #main will modify subject object including managing the pipeline
+
     """
     Subject class for setting up BIDS, conversion to nifti and preprocessing.
     ...
@@ -107,17 +112,22 @@ class Subject:
         for scanType in self.seqs:
             for scan in scanType:
                 try:
+                    print(os.curdir)
                     print("trying dcm2niix_NL")
                     #fixme
                     #imported dcm2niix to scripts folder, call that version
-                    subprocess.call("./scripts/dcm2niix_NL -p n -o %s/%s -f %s" % (bids_path, scanType, scan))
-                except TypeError:
+                    os.system("../scripts/dcm2niix --help")
+                    os.system("../scripts/dcm2niix_NL -p n -o %s/%s -f %s" % (bids_path, scanType, scan))
+                    print("break")
+                    os.system("../scripts/dcm2niix_NL -p n -o %s/%s -f %s" % ("/tmp", scanType, scan))
+                except FileNotFoundError:
                     try:
                         print("dcm2niix_NL FAILED")
                         print("trying dcm2niix")
                         #fixme
-                        subprocess.call("./scripts/dcm2niix -p n -o %s/%s -f %s" % (bids_path, scanType, scan))
-                    except RuntimeError:
+                        os.system(scripts)
+                        os.system(".dcm2niix -p n -o %s/%s -f %s" % (bids_path, scanType, scan))
+                    except OSError:
                         print(self.subject_id + "dcm2nii conversion failed")
                         exit(1)
 
