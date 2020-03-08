@@ -11,7 +11,15 @@ import subprocess #used to call bash scripts like dcm2niix
 class Subject:
     #to do
     #to-bids function - assigns all subject scan attributes to a bids style output
-    #main will modify subject object including managing the pipeline
+    #main will modify subject object (including managing the pipeline)
+    #Subject.session.seq.[] refers to an array of niftis
+
+    #add subject id attribute
+    #
+
+
+
+
 
     """
     Subject class for setting up BIDS, conversion to nifti and preprocessing.
