@@ -36,10 +36,10 @@ for subject in subjectList:
 
 # add recon-all & ants to subject object
 
-# need to add new attributes to subject class. subclass? add to existing? what is "pythonic"? how do I enforce order in
+# thought fixed need to add new attributes to subject class. subclass? add to existing? what is "pythonic"? how do I enforce order in
 # processing and handle process failure or error? could try hashing the output prior to running the command. this
 # checks if the object exists. shell script may have the check already but the goal is to not reprocess anything.
-
+#  nipypes does this for you and checks each node before it executes
 
 # pulls from bids
 

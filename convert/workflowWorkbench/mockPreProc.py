@@ -3,6 +3,13 @@ from nipype import Node, JoinNode, Workflow
 from nipype.interfaces.utility import IdentityInterface
 from nipype.interfaces import (ants, dcm2nii, fsl)
 
+#### TODO TODO TODO start
+# get first feature working!!!
+# need to get data pointing to first node which is ants or freesurfer (reconall)
+
+# for this I need to define the identity interface first with the input scans from subject
+### TODO TODO TODO end
+
 #make workflow object
 wf = Workflow(name='preprocess')
 #infospec is a node that makes a subject identity. identity matrix is what Subject.py was trying to acomplish
