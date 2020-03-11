@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 
+import glob
 import os
 import re
-import glob
+
 import scripts
-import subprocess #used to call bash scripts like dcm2niix
 
 
 class Subject:
