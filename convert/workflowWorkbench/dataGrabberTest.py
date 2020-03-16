@@ -1,4 +1,4 @@
-from nipype.interfaces.io import DataGrabber
+
 
 dg = DataGrabber(infields=['sid'], outfields=['func', 'struct', 'ref'])
 dg.inputs.base_directory = '.'
