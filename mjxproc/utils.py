@@ -116,20 +116,41 @@ class Subject:
     def to_nii(self):
         """ Converts all raw sequences to nifti.
         """
+
+        # Skip conversion if pre-existing BIDS directory exists.
+        base_out = f"{self.bids_path}/{self.subj_id}"
+        if os.path.isdir(base_out):
+            warnings.warn(f"BIDS directory for {self.subj_id} exists.\n"
+                          f"Skipping dicom to nifti conversion.")
+            return
+        else:
+            os.mkdir(base_out)
+
+        pwd = os.path.dirname(__file__)
         if self.site == 'UTD':
             # Get T1w and diffusions sequences
             self.seqs['anat'] = [self._seq_glob('MPR', topup=False)]
             self.seqs['dwi'] = [self._seq_glob('DTI', topup=False)]
-
             # Get all funcational sequences
             seq_match = ['CAAT', 'CUE_RUN1', 'CUE_RUN2', 'NBACK', 'REST']
             self.seqs['func'] = [self._seq_glob(seq, topup=False) for seq in
                                  seq_match]
-
             # Get all topup sequences
             seq_match.append('DTI')
             self.seqs['fmap'] = [self._seq_glob(seq, topup=True) for seq in
                                  seq_match]
+            # Expression to search that specifies session
+            sess_regex = glob.glob(f'{self.dir_path}/*')
+            dates = [int(re.sub("at.*", "", re.sub(".*Study", "", sess))) for
+                     sess in sess_regex]
+            # Session paths keys and date pairs, sorted by date
+            sess_regex = dict(zip(sess_regex, dates))
+            sess_regex = {k: v for k, v in sorted(sess_regex.items(),
+                                                  key=lambda x: x[1],
+                                                  reverse=True)}
+            sess_regex = list(sess_regex.values())
+            # Which dcm2niix to use
+            dcm2niix = f'{pwd}/dcm2niix/dcm2niix'
         elif self.site == 'NL':
             self.seqs['anat'] = [self._seq_glob('T1w', topup=False)]
             self.seqs['dwi'] = [self._seq_glob('dwi', topup=False)]
@@ -139,39 +160,10 @@ class Subject:
             seq_match.append('dwi')
             self.seqs['fmap'] = [self._seq_glob(seq, topup=True) for seq in
                                  seq_match]
-
-        # Skip conversion if pre-existing BIDS directory exists.
-        if os.path.isdir(self.dir_path + '/' + self.subj_id):
-            warnings.warn(f"BIDS directory for {self.subj_id} exists.\n"
-                          f"Skipping dicom to nifti conversion")
-            return
-
-        # Expression to search that specifies session
-        if self.site == 'UTD':
-            sess_regex = glob.glob(f'{self.dir_path}/*')
-            dates = [int(re.sub("at.*", "", re.sub(".*Study", "", sess))) for
-                     sess in sess_regex]
-            # Session paths keys and date pairs, sorted by date
-            sess_regex = dict(zip(sess_regex, dates))
-            sess_regex = {k: v for k, v in sorted(sess_regex.items(),
-                          key=lambda x: x[1], reverse=True)}
-            sess_regex = list(sess_regex.values())
-        elif self.site == 'NL':
             sess_regex = ['ses-01', 'ses-02']
-
-        # Make subject-level BIDS directory
-        base_out = f'{self.bids_path}/{self.subj_id}'
-        if not os.path.isdir(base_out):
-            os.mkdir(base_out)
-
-        # Select correct conversion binary
-        pwd = os.path.dirname(__file__)
-        if self.site == 'NL':
             dcm2niix = f'{pwd}/dcm2niix/dcm2niix_NL'
-        else:
-            dcm2niix = f'{pwd}/dcm2niix/dcm2niix'
 
-        # Create convert cmd strings and run
+        # Create convert cmd strings and execute
         func_seqs = ['CAAT', 'CUE-RUN-01', 'CUE-RUN-02', 'NBACK', 'REST']
         for idx, session in enumerate(['ses-01', 'ses-02']):
             if session not in self.bids_complete and idx+1 <= self.raw_sess:
