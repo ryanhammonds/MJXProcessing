@@ -3,8 +3,8 @@
 Created on Sun March 10 15:44:46 2020
 @author: Ryan Hammonds (ryanhammonds)
 '''
-from mjxproc.workflow import create_workflow
-from mjxproc.utils import Subject
+from workflow import create_workflow
+from utils import Subject
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -77,12 +77,11 @@ def main():
 
     # Run entire preprocessing worflow.
     subj_id = args['subject']
-    ses = args['ses']
+    ses = args['session']
     bids_dir = args['bids_dir']
     proc_dir = args['proc_dir']
     wf = create_workflow(subj_id, ses, bids_dir, proc_dir)
     wf.run()
-
 
 if __name__ == '__main__':
     import warnings

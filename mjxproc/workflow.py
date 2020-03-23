@@ -11,7 +11,6 @@ from nipype.interfaces import utility as niu
 from interfaces import (
     AntsCorticalThickness, FreesurferMB, Mindboggle, Fmriprep, Mriqc
 )
-from utils import Subject
 
 
 def create_workflow(
@@ -183,11 +182,12 @@ def create_workflow(
     return wf
 
 
+'''
 subj_id = 'sub-M75005160'
 ses = 'ses-01'
 raw_dir = '/mnt/Filbey/common/Studies/MJX/0Data_UTD'
-bids_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/BIDS'
-proc_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/PROC'
+bids_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/BIDS2'
+proc_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/PROC2'
 qc_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mriqc0.15.2rc1.simg',
 mb_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mindboggle.simg',
 fmri_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/fmriprep-20.0.5.simg',
@@ -195,8 +195,6 @@ ncpus=8
 
 wf = create_workflow(subj_id, ses, bids_dir, proc_dir)
 
-#wf.write_graph(graph2use='hierarchical', format='png')
+wf.write_graph(graph2use='hierarchical', format='png')
 wf.run()
-
-
-
+'''

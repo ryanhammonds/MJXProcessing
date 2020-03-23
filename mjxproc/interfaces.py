@@ -409,8 +409,8 @@ class Mindboggle(CommandLine):
     """
     input_spec = MindboggleInfoInputSpec
     output_spec = MindboggleInfoOutputSpec
-    #_cmd = 'singularity'
-    _cmd = 'echo'
+    _cmd = 'singularity'
+    #_cmd = 'echo'
 
     def _list_outputs(self):
         outputs = {}

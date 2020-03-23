@@ -13,17 +13,14 @@ setup(
     author="Ryan Hammonds",
     author_email='ryan.hammonds@utexas.edu',
     url='https://github.com/ryanhammonds/MJXProcessing',
-    packages=['mjxproc'],
+    packages=find_packages(),
     entry_points={
         'console_scripts': [
             'mjxproc=mjxproc.mjxproc_run:main'
         ]
     },
-    include_package_data=True,
     install_requires=requirements,
     license="GNU General Public License v3",
-    zip_safe=False,
-    keywords='',
     classifiers=[
         'Intended Audience :: Developers',
         'Natural Language :: English',
