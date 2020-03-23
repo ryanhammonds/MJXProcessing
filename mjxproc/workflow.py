@@ -1,160 +1,202 @@
 #!/usr/bin/env python
-
+'''
+Created on Sun March 10 15:44:46 2020
+@author: Ryan Hammonds (ryanhammonds)
+'''
 import os
-import re
-from nipype.interfaces import utility as niu
+import json
 from nipype import Workflow
 import nipype.pipeline.engine as pe
-from nipype.interfaces.base import (CommandLine, CommandLineInputSpec, File,
-                                    TraitedSpec, traits)
-from utils import bids_query
+from nipype.interfaces import utility as niu
+from interfaces import (
+    AntsCorticalThickness, FreesurferMB, Mindboggle, Fmriprep, Mriqc
+)
+from utils import Subject
 
 
-class AntsCorticalThicknessInfoInputSpec(CommandLineInputSpec):
-    """ Command line arguments/options for antsCorticalThickness.sh
+def create_workflow(
+    subj_id,
+    ses,
+    bids_dir,
+    proc_dir,
+    qc_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mriqc0.15.2rc1.simg',
+    mb_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mindboggle.simg',
+    fmri_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/fmriprep-20.0.5.simg',
+    ncpus=8
+):
+    """ Create sMRI and fMRI workflow:
+        mriqc, ants, freesurfer, mindboggle, fmriprep
+
+    Parameters
+    ----------
+    bids_dir : str
+        path to bids directory
+    subj_id : str
+        subject's ursi/id as in bids_dir ex: sub-1234
+    ses : string
+        session number, either ses-01 or ses-02
+    proc_dir : str
+        path to write processed outputs
+    mriqc_simg : str
+        path to mriqc singularity image
+    mb_simg : str
+        path to minboggle singularity image
+    fmri_simg : str
+        path to fmriprep singularity image
+    ncpus : int
+        number of cpus for parallel processing
+
+    Returns
+    -------
+    wf : nipype.pipeline.engine.workflows.Workflow
+        nipype workflow
     """
-    # singularity options
-    mode = traits.Bool(desc="singularity mode", mandatory=True, argstr="run",
-                       position=0)
-    env = traits.Bool(desc="clear env", mandatory=True, argstr="--cleanenv",
-                      position=1)
-    bind_in = traits.Directory(exists=True, mandatory=True,
-                               argstr='-B %s:/INPUT', position=2,
-                               desc='parent directory to anatomical image')
-    bind_out = traits.Directory(exists=True, mandatory=True,
-                                argstr='-B %s:/OUTPUT', position=3,
-                                desc='parent directory to  write results')
-    container = File(exists=True, mandatory=True, argstr='%s', position=4,
-                     desc='path to singularity image')
-    # ants options
-    ants_cmd = traits.Bool(desc="ants command", default=True,
-                           argstr="antsCorticalThickness.sh", position=5)
-    dims = traits.Int(desc="dimensions", default=True, argstr="-d %i",
-                      position=6)
-    in_img = traits.Str(desc='input image', mandatory=True,
-                        argstr="-a /INPUT/%s", position=7)
-    out_dir = traits.Str(desc="out dir + base name", exists=False,
-                         mandatory=True, argstr="-o /OUTPUT/%s", position=8)
-    # template options
-    template_dir = '/opt/data/OASIS-30_Atropos_template'
-
-    f_template = f'{template_dir}/T_template0.nii.gz'
-    template = traits.Bool(desc="template", default=True,
-                           argstr=f"-e {f_template}", position=9)
-
-    f_ss_template = f'{template_dir}/T_template0_BrainCerebellum.nii.gz'
-    ss_template = traits.Bool(desc="skull-striped template", mandatory=True,
-                              argstr=f"-t {f_ss_template}", position=10)
-
-    f_prob_mask = f'{template_dir}/T_template0_BrainCerebellumProbabilityMask.nii.gz'
-    prob_mask = traits.Bool(desc="probability mask", mandatory=True,
-                            argstr=f"-m {f_prob_mask}", position=11)
-
-    f_extract_mask = f'{template_dir}/T_template0_BrainCerebellumExtractionMask.nii.gz'
-    extract_mask = traits.Bool(desc="extraction mask", mandatory=True,
-                               argstr=f"-f {f_extract_mask}", position=12)
-
-    f_priors = f"{template_dir}/Priors2/"
-    priors = traits.Str(desc="priors", mandatory=True,
-                         argstr=f"-p {f_priors}%s",
-                         position=13)
-
-    seed = traits.Int(desc="random seeding", mandatory=True, argstr="-u %i",
-                      position=14)
-    precision = traits.Int(desc="float precision", mandatory=True,
-                           argstr="-j %i", position=15)
-
-
-class AntsCorticalThicknessInfoOutputSpec(TraitedSpec):
-    output_file = File(desc="ANTs segmentation file", exists=True)
-
-
-class AntsCorticalThickness(CommandLine):
-    """ Call antsCorticalThickness.sh from container.
-    """
-    input_spec = AntsCorticalThicknessInfoInputSpec
-    output_spec = AntsCorticalThicknessInfoOutputSpec
-    _cmd = 'singularity'
-
-    def _list_outputs(self):
-        import os
-        out_file = 'antsBrainSegmentation.nii.gz'
-        outputs = self.output_spec().get()
-        outputs['seg_file'] = os.path.abspath(f"{self.inputs.out_dir}/{out_file}")
-        return outputs
-
-
-def run_ants(bids_dir, subj, ses, proc_dir, simg):
-    anat_d = f"{bids_dir}/{subj}/{ses}/anat"
-    anat_f = f"{subj}_{ses}_T1w.nii"
-    bind_out = f"{proc_dir}/ants/{subj}"
-
-    if not os.path.isdir(proc_dir):
+    # Make output directories
+    if not os.path.exists(proc_dir):
         os.mkdir(proc_dir)
-    if not os.path.isdir(f"{proc_dir}/ants"):
+    if not os.path.exists(f"{proc_dir}/workflows"):
+        os.mkdir(f"{proc_dir}/workflows")
+    if not os.path.exists(f"{proc_dir}/ants"):
         os.mkdir(f"{proc_dir}/ants")
-    if not os.path.isdir(f"{proc_dir}/ants/{subj}"):
-        os.mkdir(f"{proc_dir}/ants/{subj}")
+    if not os.path.exists(f"{proc_dir}/ants/{subj_id}"):
+        os.mkdir(f"{proc_dir}/ants/{subj_id}")
+    if not os.path.exists(f"{proc_dir}/freesurfer"):
+        os.mkdir(f"{proc_dir}/freesurfer")
+    if not os.path.exists(f"{proc_dir}/mindboggled"):
+        os.mkdir(f"{proc_dir}/mindboggled")
+    if not os.path.exists(f"{proc_dir}/mriqc"):
+        os.mkdir(f"{proc_dir}/mriqc")
 
-    ants = AntsCorticalThickness(mode=True, env=True, bind_in=anat_d,
-                                 bind_out=bind_out, container=simg,
-                                 ants_cmd=True, dims=3, in_img=anat_f,
-                                 out_dir='ants', template=True,
-                                 ss_template=True, prob_mask=True,
-                                 extract_mask=True, priors='priors%d.nii.gz', seed=0,
-                                 precision=1
-                                 )
-    #print(ants.cmdline)
-    ants.run()
+    # Ensure bids compliant
+    if not os.path.exists(f"{bids_dir}/dataset_description.json"):
+        desc = {"Name": "MJX Study", "BIDSVersion": "1.2.2"}
+        with open(f'{bids_dir}/dataset_description.json', 'w') as f:
+            json.dump(desc, f, indent='\t')
 
+    wf = Workflow(name="wf_all", base_dir=f"{proc_dir}/workflows/{subj_id}")
 
-bids_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/BIDS'
-subj = 'sub-M75005160'
-ses = 'ses-01'
-proc_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/PROC'
-simg = '/mnt/Filbey/Ryan/toolbox/mindboggle.simg'
-
-run_ants(bids_dir, subj, ses, proc_dir, simg)
-
-
-
-'''
-def wf_smri(bids_dir, proc_dir, subj_id, ses):
-    # Pass anat data in from bids_query
-    ants_wf = Workflow(name=f"ants_{subj_id}")
-
+    # Specify subject/session specific info
     input_node = pe.Node(niu.IdentityInterface(fields=['bids_dir', 'subj_id',
-                                                       'ses']),
+                                                       'ses', 'proc_dir',
+                                                       'mb_simg']),
                          name='input_node')
     input_node.inputs.bids_dir = bids_dir
     input_node.inputs.subj_id = subj_id
     input_node.inputs.ses = ses
+    input_node.inputs.proc_dir = proc_dir
+    input_node.inputs.qc_simg = qc_simg
+    input_node.inputs.mb_simg = mb_simg
+    input_node.inputs.fmri_simg = fmri_simg
+    input_node.inputs.ncpus = ncpus
 
-    qbids_node = pe.Node(bids_query(bids_dir, subj_id, ses), name='qbids_node')
+    # Mriqc
+    qc_node = pe.Node(Mriqc(), name='mriqc')
+    qc_node.inputs.mode = 'run'
+    qc_node.inputs.env = '--cleanenv'
+    qc_node.inputs.io_partic = True
 
-    ants_wf.add_nodes([input_node, qbids_node])
-    ants_wf.connect = [(input_node, qbids_node, [('anat', 'anat')])]
+    # ANTs segmentation
+    ants_node = pe.Node(AntsCorticalThickness(), name='ants')
+    ants_node.inputs.mode = 'run'
+    ants_node.inputs.env = '--cleanenv'
+    ants_node.inputs.ants_cmd = 'antsCorticalThickness.sh'
+    ants_node.inputs.dims = 3
+    ants_node.inputs.template = True
+    ants_node.inputs.ss_template = True
+    ants_node.inputs.prob_mask = True
+    ants_node.inputs.extract_mask = True
+    ants_node.inputs.priors = 'priors%d.nii.gz'
+    ants_node.inputs.seed = 0
+    ants_node.inputs.precision = 1
+    ants_node.inputs.in_img = f"{subj_id}/{ses}/anat/{subj_id}_{ses}_T1w.nii"
+    ants_node.inputs.out = f"ants/{subj_id}/ants"
 
-    # Build ants command
-    def _ants_segment(in_img, out_dir):
-        import os.path as op
-        in_dir = op.dirname(in_img)
-        _, f_img = op.split(in_img)
-        cmd = f"singularity run --cleanenv -B {in_dir}:/INPUT " \
-              f"-B {out_dir}:/OUTPUT " \
-              f"/mnt/Filbey/Ryan/toolbox/mindboggle.simg " \
-              f"antsCorticalThickness.sh -d 3 -a /DOCK/data/$ID/T1w.nii " \
-              f"-o $OUTPUT/ants_subjects/$ID/ants " \
-              f"-e $TEMPLATE/T_template0.nii.gz " \
-              f"-t $TEMPLATE/T_template0_BrainCerebellum.nii.gz " \
-              f"-m $TEMPLATE/T_template0_BrainCerebellumProbabilityMask.nii.gz " \
-              f"-f $TEMPLATE/T_template0_BrainCerebellumExtractionMask.nii.gz " \
-              f"-p $TEMPLATE/Priors2/priors%d.nii.gz " \
-              f"-u 0 " \
-              f"-j 1"
+    # Freesurfer
+    fs_node = pe.Node(FreesurferMB(), name='freesurfer')
+    fs_node.inputs.mode = 'run'
+    fs_node.inputs.env = '--cleanenv'
+    fs_node.inputs.fs_cmd = 'recon-all -all'
+    fs_node.inputs.fs_sd = 'freesurfer'
+    fs_node.inputs.in_img = f"{subj_id}/{ses}/anat/{subj_id}_{ses}_T1w.nii"
+    fs_node.inputs.parallel = True
 
-    input_node = pe.Node(niu.Function(inputs_names=['bids_dir', 'subj_id', 'ses']
-                                      output_names=['anat', 'func', 'dwi', 'fmap']
-                                      function=bids_query)
-                         name='bids_query')
-    '''
+    # Mindboggle
+    mb_node = pe.Node(Mindboggle(), name='mindboggle')
+    mb_node.inputs.mode = 'run'
+    mb_node.inputs.env = '--cleanenv'
+    mb_node.inputs.mb_cmd = 'mindboggle'
+    mb_node.inputs.out = 'mindboggled'
+    mb_node.inputs.vis_color = True
+
+    # Fmriprep
+    fmri_node = pe.Node(Fmriprep(), name='fmriprep')
+    fmri_node.inputs.mode = 'run'
+    fmri_node.inputs.env = '--cleanenv'
+    fmri_node.inputs.bind_fs_home = '$FREESURFER_HOME'
+    fmri_node.inputs.skip_validation = True
+    fmri_node.inputs.aroma = True
+    fmri_node.inputs.out_space = 'MNI152NLin6Asym T1w'
+    fmri_node.inputs.fs_license = True
+    fmri_node.inputs.io_partic = True
+
+    # Connections into mriqc
+    def half(ncpus): return int(ncpus/2)  # modern lamda replacement
+    def mem_calc(ncpus): return int(ncpus*2)  # alters ncpus for other args
+    def cut_sub(subj): return subj[4:]
+    wf.connect([(input_node, qc_node, [('bids_dir', 'bind_in'),
+                                       ('proc_dir', 'bind_out'),
+                                       ('qc_simg', 'container'),
+                                       (('subj_id', cut_sub), 'partic_lab'),
+                                       ('ncpus', 'ncpus'),
+                                       (('ncpus', half), 'ants_threads'),
+                                       (('ncpus', mem_calc), 'mem')])])
+
+    # Connections into freesurfer
+    wf.connect([(input_node, fs_node, [('bids_dir', 'bind_in'),
+                                       ('proc_dir', 'bind_out'),
+                                       ('mb_simg', 'container'),
+                                       ('subj_id', 'fs_id'),
+                                       ('ncpus', 'fs_mp')])])
+
+    # Connections into ants
+    wf.connect([(input_node, ants_node, [('bids_dir', 'bind_in'),
+                                         ('proc_dir', 'bind_out'),
+                                         ('mb_simg', 'container')])])
+
+    # Connections into mindboggle
+    wf.connect([(input_node, mb_node, [('proc_dir', 'bind_in'),
+                                       ('mb_simg', 'container'),
+                                       ('ncpus', 'ncpus')])])
+    wf.connect([(fs_node, mb_node, [('recon_dir', 'fs_dir')])])
+    wf.connect([(ants_node, mb_node, [('seg_file', 'ants_seg')])])
+
+    # Connections into fmriprep
+    wf.connect([(input_node, fmri_node, [('bids_dir', 'bind_in'),
+                                         ('proc_dir', 'bind_out'),
+                                         ('fmri_simg', 'container'),
+                                         ('subj_id', 'partic_lab'),
+                                         ('ncpus', 'nthreads')])])
+
+    def parent_dir(p): return p.split('/')[0]
+    wf.connect(fs_node, ('recon_dir', parent_dir), fmri_node, 'recon_dir')
+
+    return wf
+
+
+subj_id = 'sub-M75005160'
+ses = 'ses-01'
+raw_dir = '/mnt/Filbey/common/Studies/MJX/0Data_UTD'
+bids_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/BIDS'
+proc_dir = '/mnt/Filbey/common/Studies/MJXProcessing/tests/examples/PROC'
+qc_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mriqc0.15.2rc1.simg',
+mb_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mindboggle.simg',
+fmri_simg='/mnt/Filbey/common/Studies/MJXProcessing/singularity/fmriprep-20.0.5.simg',
+ncpus=8
+
+wf = create_workflow(subj_id, ses, bids_dir, proc_dir)
+
+#wf.write_graph(graph2use='hierarchical', format='png')
+wf.run()
+
+
+

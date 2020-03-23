@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-
+'''
+Created on Sun March 10 15:44:46 2020
+@author: Ryan Hammonds (ryanhammonds)
+'''
 import os
 import re
 import glob
@@ -12,14 +15,20 @@ class Subject:
     """
     Subject class for setting up BIDS, conversion to nifti and preprocessing.
     ...
+
+    Parameters
+    ----------
+    dir_path : str
+        top level subject raw data directory
+    bids_path : str
+        bids directory to convert raw data to
+
     Attributes
     ----------
     dir_path : str
         top level subject raw data directory
     bids_path : str
         bids directory to convert raw data to
-    prep_path : str
-        output directory for processed data
     subj_id : str
         ursi of participant run based on dir_path
     site : str
@@ -31,7 +40,7 @@ class Subject:
         anat, task and dwi keys paired with raw image paths
     """
 
-    def __init__(self, dir_path, bids_path, prep_path):
+    def __init__(self, dir_path, bids_path):
         self.dir_path = dir_path
         if self.dir_path.endswith('/'):
             self.dir_path = self.dir_path[:-1]
@@ -40,17 +49,11 @@ class Subject:
         if self.bids_path.endswith('/'):
             self.bids_path = self.bids_path[:-1]
 
-        self.prep_path = prep_path
-        if self.prep_path.endswith('/'):
-            self.prep_path = self.prep_path[:-1]
-
         # Check arguments
         if not os.path.isdir(self.dir_path):
             raise IOError(f'Raw data directory missing: {self.dir_path}')
         if not os.path.isdir(self.bids_path):
             os.mkdir(self.bids_path)
-        if not os.path.isdir(self.prep_path):
-            os.mkdir(self.prep_path)
 
         # Determine if NL or UTD data
         self.subj_id = re.sub(".*/", '', self.dir_path)
@@ -113,7 +116,7 @@ class Subject:
 
         return seq_match
 
-    def to_nii(self):
+    def to_bids(self):
         """ Converts all raw sequences to nifti.
         """
 
@@ -165,6 +168,7 @@ class Subject:
 
         # Create convert cmd strings and execute
         func_seqs = ['CAAT', 'CUE-RUN-01', 'CUE-RUN-02', 'NBACK', 'REST']
+        print('Converting to nifti...')
         for idx, session in enumerate(['ses-01', 'ses-02']):
             if session not in self.bids_complete and idx+1 <= self.raw_sess:
                 # Setup BIDS sub-directories
@@ -202,11 +206,11 @@ class Subject:
                             if 'DTI' not in img and'dwi' not in img:
                                 cmd.append(f'{dcm2niix} -o {sess_out}/fmap -f '
                                            f'{self.subj_id}_ses-01_acq-'
-                                           f'{func_seqs[idx]}_epi {img}')
+                                           f'{func_seqs[idx]}_dir-AP_epi {img}')
                             else:
                                 cmd.append(f'{dcm2niix} -o {sess_out}/fmap -f '
-                                           f'{self.subj_id}_ses-01_acq-dwi_epi '
-                                           f'{img}')
+                                           f'{self.subj_id}_ses-01_acq-dwi_'
+                                           f'dir-AP_epi {img}')
 
                     # Execute conversion commands
                     for conv in cmd:
@@ -229,12 +233,20 @@ class Subject:
                             img_match = [img for img in img_match if 'fmap'
                                          not in img][0]
 
+                            # Load img json into dictionary
                             with open(f"{d_out}/{f_out}.json", 'r') as f:
                                 img_json = json.load(f)
 
-                            img_json['IntendedFor'] = img_match
+                            # Clear prexisting key, if one exists
+                            if 'IntendedFor' in list(img_json.keys()):
+                                del img_json['IntendedFor']
+
+                            # Write
+                            img_json['IntendedFor'] = img_match.split('/')[-1]
                             with open(f'{d_out}/{f_out}.json', 'w') as f:
                                 json.dump(img_json, f, indent='\t')
+
+        print('Conversion complete')
 
 
 def bids_query(bids_dir, subj_id, ses):
