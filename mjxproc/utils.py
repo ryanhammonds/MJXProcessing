@@ -214,9 +214,10 @@ class Subject:
 
                     # Execute conversion commands
                     for conv in cmd:
-                        subprocess.run(conv, shell=True,
-                                       stdout=subprocess.DEVNULL,
-                                       stderr=subprocess.DEVNULL)
+                        output = subprocess.run(conv, shell=True,
+                                                stdout=subprocess.DEVNULL,
+                                                stderr=subprocess.DEVNULL)
+                        output.check_returncode()
 
                         # Edit fmap jsons to pair with image
                         if img_type == 'fmap':

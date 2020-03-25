@@ -16,48 +16,58 @@ def get_parser():
     parser.add_argument('subject',
                         default=None,
                         nargs=1,
+                        type=str,
                         help='Subject ID (i.e. sub-1234)\n')
     parser.add_argument('session',
                         default=None,
                         nargs=1,
+                        type=str,
                         help='Subject session, either ses-01 or ses-01.\n')
     parser.add_argument('raw_dir',
                         default=None,
                         nargs=1,
+                        type=str,
                         help='Path to single subject raw data folder.\n')
     parser.add_argument('bids_dir',
                         default=None,
                         nargs=1,
+                        type=str,
                         help='Path to BIDS parent folder.\n')
     parser.add_argument('proc_dir',
                         default=None,
                         nargs=1,
+                        type=str,
                         help='Path to write process outputs.\n')
     parser.add_argument('-qc_simg',
-                        metavar='Quality control container.',
                         default='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mriqc0.15.2rc1.simg',
                         nargs=1,
                         required=False,
                         help='Path to mriqc singularity image.\n')
     parser.add_argument('-mb_simg',
-                        metavar='Mindboggle container.',
                         default='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mindboggle.simg',
                         nargs=1,
                         required=False,
                         help='Path to mindboggle singularity image.\n')
+    parser.add_argument('-fs_simg',
+                        default='/mnt/Filbey/common/Studies/MJXProcessing/singularity/mindboggle.simg',
+                        nargs=1,
+                        required=False,
+                        help='Path to freesurfer singularity image.\n')
     parser.add_argument('-fmri_simg',
-                        metavar='fmriprep container.',
                         default='/mnt/Filbey/common/Studies/MJXProcessing/singularity/fmriprep-20.0.5.simg',
                         nargs=1,
                         required=False,
                         help='Path to fmriprep singularity image.\n')
     parser.add_argument('-ncpus',
-                        metavar='Number of cpus to use.',
-                        default=8,
+                        default=6,
                         nargs=1,
                         required=False,
                         help='Number of cpus for parallel processing.\n')
-
+    parser.add_argument('-run_nodes',
+                        default=['mriqc', 'ants', 'freesurfer', 'mindboggle', 'fmriprep'],
+                        nargs='+',
+                        required=False,
+                        help='List of nodes to run\n')
     return parser
 
 
@@ -65,9 +75,12 @@ def main():
     # Get arguments
     args = get_parser().parse_args()
     args = vars(args)
-    for arg in args:
-        if type(args[arg]) == list:
-            args[arg] = args[arg][0]
+
+    args['subject'] = args['subject'][0]
+    args['session'] = args['session'][0]
+    args['raw_dir'] = args['raw_dir'][0]
+    args['bids_dir'] = args['bids_dir'][0]
+    args['proc_dir'] = args['proc_dir'][0]
 
     # Convert to BIDS
     raw_dir = args['raw_dir']
@@ -80,8 +93,17 @@ def main():
     ses = args['session']
     bids_dir = args['bids_dir']
     proc_dir = args['proc_dir']
-    wf = create_workflow(subj_id, ses, bids_dir, proc_dir)
+    qc_simg = args['qc_simg']
+    mb_simg = args['mb_simg']
+    fs_simg = args['fs_simg']
+    fmri_simg = args['fmri_simg']
+    ncpus = args['ncpus']
+    run_nodes = args['run_nodes']
+
+    wf = create_workflow(subj_id, ses, bids_dir, proc_dir, qc_simg, mb_simg,
+                         fs_simg, fmri_simg, ncpus, run_nodes)
     wf.run()
+
 
 if __name__ == '__main__':
     import warnings

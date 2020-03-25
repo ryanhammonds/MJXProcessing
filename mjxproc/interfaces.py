@@ -267,48 +267,55 @@ class FreesurferMBInfoInputSpec(CommandLineInputSpec):
         mandatory=True,
         position=3
     )
+    bind_fs_home = traits.Str(
+        argstr='-B %s:/opt/freesurfer/',
+        desc='allow access to fs license',
+        mandatory=True,
+        position=4
+    )
     container = File(
         argstr='%s',
         desc='path to singularity image',
         exists=True,
         mandatory=True,
-        position=4,
+        position=5,
     )
     # freesurfer arguments
     fs_cmd = traits.Str(
         argstr="%s",
         desc="freesurfer command command",
         mandatory=True,
-        position=5)
+        position=6
+    )
     in_img = traits.Str(
         argstr="-i /BIDS/%s",
         desc="anatomical image",
         mandatory=True,
-        position=6
+        position=7
     )
     fs_id = traits.Str(
         argstr='-s %s',
         mandatroy=True,
         desc="subj id",
-        position=7
+        position=8
     )
     fs_sd = traits.Str(
         argstr='-sd /PROC/%s',
         desc="output directory",
         mandatory=True,
-        position=8
+        position=9
     )
     parallel = traits.Bool(
         argstr='-parallel',
         desc='parallel processing',
-        postiion=9,
-        mandatory=True
+        mandatory=True,
+        postiion=10
     )
     fs_mp = traits.Int(
         argstr="-openmp %i",
         desc='number of cpus',
         mandatory=True,
-        position=10
+        position=11
     )
 
 
