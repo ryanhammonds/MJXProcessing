@@ -61,6 +61,7 @@ def get_parser():
     parser.add_argument('-ncpus',
                         default=6,
                         nargs=1,
+                        type=int,
                         required=False,
                         help='Number of cpus for parallel processing.\n')
     parser.add_argument('-run_nodes',
@@ -97,9 +98,8 @@ def main():
     mb_simg = args['mb_simg']
     fs_simg = args['fs_simg']
     fmri_simg = args['fmri_simg']
-    ncpus = args['ncpus']
+    ncpus = args['ncpus'][0]
     run_nodes = args['run_nodes']
-
     wf = create_workflow(subj_id, ses, bids_dir, proc_dir, qc_simg, mb_simg,
                          fs_simg, fmri_simg, ncpus, run_nodes)
     wf.run()
