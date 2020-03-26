@@ -113,6 +113,10 @@ def create_workflow(
             os.mkdir(f"{proc_dir}/mriqc")
         except FileExistsError:
             pass
+        try:
+            os.mkdir(f"{proc_dir}/mriqc/{subj_id}")
+        except FileExistsError:
+            pass
         qc_node = pe.Node(Mriqc(), name='mriqc')
         qc_node.inputs.mode = 'run'
         qc_node.inputs.env = '--cleanenv'
