@@ -68,7 +68,8 @@ def get_parser():
                         default=['mriqc', 'ants', 'freesurfer', 'mindboggle', 'fmriprep'],
                         nargs='+',
                         required=False,
-                        help='List of nodes to run\n')
+                        help=f"List of nodes to run: \n" \
+                             f"mriqc, ants, freesurfer, mindboggle, and/or fmriprep")
     return parser
 
 
