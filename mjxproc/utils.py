@@ -167,7 +167,7 @@ class Subject:
             dcm2niix = f'{pwd}/dcm2niix/dcm2niix_NL'
 
         # Create convert cmd strings and execute
-        func_seqs = ['CAAT', 'CUE-RUN-01', 'CUE-RUN-02', 'NBACK', 'REST']
+        func_seqs = ['CAAT', 'CUERUN01', 'CUERUN02', 'NBACK', 'REST']
         print('Converting to nifti...')
         for idx, session in enumerate(['ses-01', 'ses-02']):
             if session not in self.bids_complete and idx+1 <= self.raw_sess:
