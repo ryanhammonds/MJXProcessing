@@ -18,13 +18,3 @@ fMRI Preprocessing:
 	
 	mriqc (mriqc container)
 	fmriprep (fmriprep container)
-
-TODO:
-
-dMRI Preprocessing:
-	
-	fsl
-
-Eprime and Presentation Parsing.
-
-	Custom python scripts.
